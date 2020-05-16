@@ -2,7 +2,7 @@ import java.util.Iterator;
 import static org.junit.Assert.*;
 import org.junit.*;
 
-public class TestStack{
+public class TestMyStack{
     private MyStack<Integer> stack;
 
     @Before
