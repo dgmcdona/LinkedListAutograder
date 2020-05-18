@@ -1,6 +1,7 @@
 SHELL:=/bin/bash
 
 all:
-	tar -mxf autograde.tar
 	/usr/bin/unzip -j -qq handin.zip
-	/usr/bin/python2.7 grader.py
+	/usr/bin/python3 grader.py
+
+#tar -mxf autograde.tar

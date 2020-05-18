@@ -1,13 +1,14 @@
 #!/usr/bin/python3
 
-import subprocess
-import os
 import sys
+import json
+from subprocess import check_output, PIPE, CalledProcessError
 
 # Author: David McDonald (5/15/20)
 
 # Summary: Build and test all Java files.
 # Usage: python3 grader.py
+
 CPFLAGS = '-cp .:libs/hamcrest-all-1.3.jar:libs/junit-4.13.jar'
 
 CLASSES = ['SinglyLinkedList', 'MyStack', 'InfixPostfix']
@@ -40,58 +41,70 @@ POINTS = {'SinglyLinkedList': {
           }
 
 
-def compile_java(filename, files):
-    if '{}.java'.format(filename) not in files:
-        message = ('Missing {}.java -- '
-                   'Add file to handin.zip or double-check file name.')
-        message = message.format(filename)
-        print(message)
-    else:
-        try:
-            process = 'javac {}.java'.format(filename)
-            subprocess.check_output(process, shell=True)
-        except subprocess.CalledProcessError as javac_error:
-            print("Could not compile {}.java: Exited with Error {}: {}".format(
-                filename, javac_error.returncode, javac_error.output))
-
-
-def compile_tests():
+def compile_test(test_class):
+    process = 'javac {} {}.java'
+    process = process.format(CPFLAGS, test_class)
     try:
-        process = 'javac {} {}.java'
-        tests = " ".join([x + '.java' for x in TESTS])
-        process = process.format(CPFLAGS, tests)
-        subprocess.check_output(process)
-    except subprocess.CalledProcessError as javac_error:
-        print("Could not compile Junit tests")
-        print(javac_error.returncode, javac_error.output)
-        sys.exit(0)
+        check_output(process, shell=True)
+        return 1
+    except CalledProcessError:
+        print("Could not compile {}".format(test_class))
+        return 0
 
 
-def run_tests():
-    out = ''
+def compile_all_tests():
     for test in TESTS:
-        try:
-            process = 'java org.junit.runner.JUnitCore {}'
-            process = process.format(test)
-            out += subprocess.check_output(process, shell=True)
-        except subprocess.CalledProcessError as java_error:
-            print("Error running unit test: {}".format(test))
-            print(java_error.returncode, java_error.output)
-    return out
+        if not compile_test(test):
+            print("Error compiling test classes: Exiting")
+            sys.exit(2)
+
+
+def compile_class(_class, scores):
+    process = 'javac {} {}.java'
+    process = process.format(CPFLAGS, _class)
+    try:
+        check_output(process, shell=True)
+        return True
+    except CalledProcessError:
+        print("Error compiling {}.java, check submission.".format(_class))
+        return False
+
+
+def test_all_classes():
+    scores = {}
+    for _class in POINTS:
+        if not compile_class(_class, scores):
+            c_scores = {test: 0 for (test, points) in POINTS[_class].items()}
+            scores.update(c_scores)
+        else:
+            scores.update(run_test(_class))
+    return scores
+
+
+def run_test(_class):
+    scores = {}
+    try:
+        process = 'java {} org.junit.runner.JUnitCore {}'
+        process = process.format(CPFLAGS, 'Test' + _class)
+        out = check_output(process, shell=True)
+        point_values = POINTS[_class]
+        for test_case in point_values:
+            if test_case in out.decode('utf-8'):
+                scores[test_case] = 0
+            else:
+                scores[test_case] = point_values[test_case]
+        return scores
+    except CalledProcessError:
+        return {key: 0 for (key, value) in point_values.items()}
+
+
+def print_scores():
+    print(json.dumps(test_all_classes()))
 
 
 def main():
-    scores = []
-    ls_files = os.listdir('.')
-    compile_tests()
-    for _class in CLASSES:
-        compile_java(_class, ls_files)
-    output = run_tests()
-    for test in POINTS:
-        if test in output:
-            scores.append(0)
-        else:
-            scores.append(POINTS[test])
+    compile_all_tests()
+    print_scores()
 
 
 if __name__ == '__main__':
