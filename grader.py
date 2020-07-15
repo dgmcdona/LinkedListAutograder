@@ -3,7 +3,7 @@
 import sys
 import os
 import json
-from subprocess import check_output, PIPE, CalledProcessError
+from subprocess import check_output, CalledProcessError
 
 # Author: David McDonald (5/15/20)
 
@@ -43,6 +43,17 @@ POINTS = {'SinglyLinkedList': {
               'testInfixPostfix': 20
               }
           }
+
+# Prepare dictionary for semantic feedback
+'''
+semantic_feedback = dict()
+semantic_feedback['_presentation'] = 'semantic'
+semantic_feedback['stages'] = ['Build', 'Run', 'Scoring']
+semantic_feedback['Build'] = {
+        'Compile tests': {'passed' = False},
+        'Compile classes': {'passed' = False},
+        }
+'''
 
 
 # Compile test class, return True if successful
@@ -118,7 +129,9 @@ def run_test(_class):
 
 
 # Print JSON representation of the scores.
-def print_scores():
+def print_scores(is_semantic):
+    if is_semantic:
+        print('{"_presentation": "semantic"}')
     results = test_all_classes()
     scores = {'scores': results}
     scores['scoreboard'] = list(results.values())
@@ -134,7 +147,7 @@ def clean_and_exit(status):
 
 def main():
     compile_all_tests()
-    print_scores()
+    print_scores(True)
     clean_and_exit(0)
 
 
